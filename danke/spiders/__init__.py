@@ -30,38 +30,20 @@ class DanKeSpider(scrapy.Spider):
             ele_content = ele.css(query).get()
             return ele_content.strip() if ele_content else ele_content
 
-        def get_all_rooms(response, query):
-            room_map = {
-                0: 'room_desc',
-                1: 'room_owner',
-                2: 'room_size',
-                3: 'rest_room',
-                4: 'shower',
-                5: 'balcony',
-                6: 'rental'
+        def get_room_info():
+            room_info = {
+                response.css('.room-price .price-list label::text').get():
+                    response.css('span .room-price-sale::text').get() + \
+                    response.css('.room-price-sale em::text').get(),
             }
-            friends = []
-            for tr in response.css(query):
-                friend = {}
-                index = 0
-                for td in tr.css('td'):
-                    if index == 0:
-                        friend[room_map[index]] = \
-                            (extract_from_css(td, 'strong'),
-                             extract_from_css(td, 'span'),
-                             extract_from_css(td, 'a'),
-                             td.css('a::attr(href)').get())
-                    else:
-                        friend[room_map[index]] = extract_from_css(td)
-                    index += 1
-                friends.append(friend)
-            return friends
+            infos = response.css('.room-list-box .room-detail-box .room-list').getall()
+            for info in infos:
+                key, value = info.css('label::text').get().strip().split('：')
+                if key == '区域':
+                    value = info.css('label div::attr(title)')
 
         yield {
-            'room_num': response.css('label .instalment::text').getall()[-1],
             'room_url': response.url,
-            'room_name': extract_from_css(response, '.room-name h1'),
-            'room_price': extract_from_css(response, '.room-price-sale'),
-            'floor': response.css('.room-detail-box ').css('.room-list')[1].css('label::text').get(),
-            'room_info_friend': get_all_rooms(response, '.room-info-firend .room_center table tbody tr')
+            'room_info': get_room_info(),
+            'room_friends': get_room_friends()
         }
